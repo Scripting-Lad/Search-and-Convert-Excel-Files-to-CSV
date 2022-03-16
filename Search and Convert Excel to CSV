@@ -1,0 +1,56 @@
+# Pre-Reqs
+# Create a Temp Folder on your Desktop
+# Create an XLSX and CSV Folder inside of the temp folder
+
+$Search = "\\Place\You\Want\To\Search"
+$Drop = "$Home\Desktop\Temp\XLSX"
+$Final = "$Home\Desktop\Temp\CSV"
+
+Function ExcelToCsv ($File) {
+    #$Excel.DisplayAlerts = $false
+    #$Excel.Visible = $false
+    $myDir = $Drop
+    $excelFile = "$myDir\" + $File #+ ".xlsx"
+    $Excel = New-Object -ComObject Excel.Application
+    $wb = $Excel.Workbooks.Open($excelFile)
+	
+    foreach ($ws in $wb.Worksheets) {
+        $Excel.DisplayAlerts = $false
+        $ws.SaveAs("$myDir\" + $File + ".csv", 6)
+    }
+    #$Excel.Quit($True)
+}
+
+# Locate XLSX
+Write-Host "Locating Excel Files"
+$Discover = Get-ChildItem -Path $Search -Filter *.xlsx -Recurse -File -ErrorAction SilentlyContinue
+
+# Copy to Temp Folder
+write-host "Copying Excel files to Temp Folder"
+Copy-Item $Discover.FullName -Destination $Drop
+
+# Create List of copied XLSX
+Write-Host "Creating list of found Excel Files"
+$list = Get-ChildItem -Path $Drop -Filter *.xlsx -Recurse -File -ErrorAction SilentlyContinue
+
+# Convert to CSV
+Write-Host "Starting Conversion to CSV" 
+$i = 0
+$count = $List.count
+$List |
+ForEach-Object{
+    $i++
+    Write-Host "Converting $i out of $count - $_"  
+    ExcelToCsv -File $_
+    Stop-Process -Name "EXCEL"
+}
+
+# Move CSV to CSV Folder
+Write-Host "Copying CSVs to CSV Folder for analytics"
+$CSV = Get-ChildItem -Path $Drop -Filter *.CSV -Recurse -File -ErrorAction SilentlyContinue
+Copy-Item -Path $CSV.FullName -Destination $Final
+
+# Delete CSV Files and Found Excel files from Temp Folder
+Write-Host 'Deleting Temp\XLSX'
+Get-ChildItem -Path "$home\Desktop\Temp\XLSX" -Include *.* -File -Recurse | 
+foreach { $_.Delete()}
